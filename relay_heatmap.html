@@ -54,7 +54,7 @@
   .update-meta{ font-family:"JetBrains Mono",monospace; font-size:11.5px; color:var(--text-faint); text-align:right; }
   .update-meta b{ color:var(--text-muted); font-weight:600; }
 
-  /* ---------- 漲停板情緒（全市場，跟另外兩個 claude.ai 網頁同一套邏輯，不是只算追蹤名單）---------- */
+  /* ---------- 漲停板情緒（全市場）---------- */
   .sentiment-panel{
     background:var(--panel); border:1px solid var(--panel-border); border-radius:10px;
     padding:7px 14px; box-shadow:var(--shadow-panel);
@@ -75,51 +75,84 @@
   .sc-down{ color:hsl(150,55%,55%); }
   .sc-breakdown{ font-size:10.5px; color:var(--text-muted); margin-top:2px; font-variant-numeric:tabular-nums; white-space:nowrap; }
 
-  /* ---------- board / panel / cells：跟 claude.ai 上發布的熱力圖同一套視覺語言 ---------- */
+  /* ---------- board / panel / cells ---------- */
   .board{
     display:grid;
-    grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
+    grid-template-columns:repeat(auto-fill, minmax(190px, 1fr));
     grid-auto-flow:row;
     align-items:start;
-    gap:14px;
+    gap:12px;
   }
-  @media (max-width:520px){ .board{ grid-template-columns:1fr; } }
+  @media (max-width:420px){ .board{ grid-template-columns:1fr; } }
 
   .panel{
     background:var(--panel);
     border:1px solid var(--panel-border);
-    border-radius:10px;
-    padding:10px;
+    border-radius:9px;
+    padding:4px;
     box-shadow:var(--shadow-panel);
     transition:box-shadow .2s ease;
   }
   .panel.just-updated{ box-shadow:0 0 0 1px var(--accent-dim), var(--shadow-panel); }
 
   .panel-head{
-    display:flex; align-items:baseline; justify-content:space-between; gap:8px;
-    padding:0 2px 8px; margin-bottom:8px;
+    display:flex; align-items:baseline; justify-content:space-between; gap:4px;
+    padding:0 1px 2px; margin-bottom:2px;
     border-bottom:1px solid var(--panel-border-soft);
   }
   .panel-name{
     font-family:"Noto Serif TC","PingFang TC","Heiti TC","Microsoft JhengHei",serif;
-    font-weight:600; font-size:14px; color:var(--text); letter-spacing:.01em;
+    font-weight:600; font-size:12px; color:var(--text); letter-spacing:.01em;
   }
-  .panel-count{ font-family:"Noto Sans TC",sans-serif; font-weight:500; font-size:10.5px; color:var(--text-faint); margin-left:6px; }
+  .panel-count{ font-family:"Noto Sans TC",sans-serif; font-weight:500; font-size:8px; color:var(--text-faint); margin-left:3px; }
   .panel-count.is-thin{ color:#e0a030; }
-  .panel-avg{ font-family:"JetBrains Mono",monospace; font-size:11.5px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .panel-near{ display:none; margin-left:3px; font-size:10px; vertical-align:middle; }
+  .panel-near.is-active{
+    display:inline-block;
+    filter:drop-shadow(0 0 3px rgba(255,214,60,.95));
+    animation:nearAlertPulse .8s ease-in-out infinite;
+  }
+  @keyframes nearAlertPulse{
+    0%,100%{ transform:scale(1); opacity:.85; }
+    50%{ transform:scale(1.3); opacity:1; }
+  }
+  .panel-fire{ display:none; margin-left:3px; font-size:10px; vertical-align:middle; }
+  .panel-fire.is-active{
+    display:inline-block;
+    filter:drop-shadow(0 0 3px rgba(255,140,0,.9));
+    animation:firePulse 1s ease-in-out infinite;
+  }
+  @keyframes firePulse{
+    0%,100%{ transform:scale(1); opacity:.85; }
+    50%{ transform:scale(1.3); opacity:1; }
+  }
+  .panel-avg{ font-family:"JetBrains Mono",monospace; font-size:9px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
 
-  .cells{ display:grid; grid-template-columns:repeat(3, 1fr); gap:5px; }
+  .cells{ display:grid; grid-template-columns:repeat(3, 1fr); gap:3px; }
   .cell{
-    position:relative; border-radius:6px; padding:6px 5px 5px; min-height:50px;
+    position:relative; border-radius:5px; padding:3px 3px 2px; min-height:34px;
     display:flex; flex-direction:column; justify-content:space-between;
     transition:background .35s ease, color .35s ease, box-shadow .35s ease;
   }
-  .cell.is-limit{ animation:limitGlow 1.4s ease-in-out infinite; }
-  @keyframes limitGlow{ 0%,100%{ filter:brightness(1); } 50%{ filter:brightness(1.18); } }
-  /* 快到漲停/跌停（9%~9.5%之間，還沒鎖住）也閃一下，提醒「快到了」，但比真正鎖住的漲跌停溫和一點 */
-  .cell.is-near{ animation:nearGlow 1s ease-in-out infinite; }
-  @keyframes nearGlow{ 0%,100%{ filter:brightness(1); box-shadow:0 0 0 1px rgba(255,255,255,0.25); } 50%{ filter:brightness(1.14); box-shadow:0 0 0 1px rgba(255,255,255,0.55); } }
+  .cell.is-near{ animation:nearGlow .8s ease-in-out infinite; position:relative; z-index:1; }
+  @keyframes nearGlow{
+    0%,100%{
+      filter:brightness(1) saturate(1);
+      box-shadow:0 0 0 1px var(--near-glow-color, rgba(255,255,255,.3)), 0 0 5px -1px var(--near-glow-color, rgba(255,255,255,.3));
+      transform:scale(1);
+    }
+    50%{
+      filter:brightness(1.45) saturate(1.3);
+      box-shadow:0 0 0 2px var(--near-glow-color, #fff), 0 0 20px 3px var(--near-glow-color, rgba(255,255,255,.9));
+      transform:scale(1.06);
+    }
+  }
   .cell.flash{ box-shadow:0 0 0 2px #fff inset; }
+  .cell-vol-badge{
+    display:none; position:absolute; top:1px; right:2px; font-size:8px; line-height:1;
+    filter:drop-shadow(0 0 2px rgba(255,214,60,.9));
+  }
+  .cell-vol-badge.is-active{ display:inline-block; }
   .cell-code{ font-family:"JetBrains Mono",monospace; font-size:10.5px; font-weight:600; opacity:.9; }
   .cell-name{ font-family:"Noto Sans TC",sans-serif; font-size:11px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .cell-change{ font-family:"JetBrains Mono",monospace; font-size:12.5px; font-weight:700; font-variant-numeric:tabular-nums; }
@@ -127,7 +160,7 @@
   .empty-hint{ color:var(--text-faint); font-size:13px; padding:80px 0; text-align:center; }
   .empty-hint.hide{ display:none; }
 
-  /* ---------- 搜尋個股（代號/名稱），只影響右側熱力圖格子要不要淡出/整個族群要不要隱藏 ---------- */
+  /* ---------- 搜尋個股 ---------- */
   .search-wrap{ position:relative; display:flex; align-items:center; }
   .search-wrap svg{ position:absolute; left:11px; width:14px; height:14px; stroke:var(--text-faint); pointer-events:none; }
   #search{
@@ -145,7 +178,7 @@
   }
   .search-empty-state.show{ display:block; }
 
-  /* ---------- 資金流向（圓環＋排行榜）：跟另外兩個 claude.ai 網頁同一套視覺語言，這裡改成即時更新 ---------- */
+  /* ---------- 資金流向排行榜（左側欄）---------- */
   .combined-layout{ display:grid; grid-template-columns:500px 1fr; gap:18px; align-items:start; }
   .flow-side{
     display:flex; flex-direction:column; gap:14px;
@@ -157,69 +190,51 @@
     .flow-side{ position:static; max-height:none; overflow-y:visible; }
   }
 
-  .ring-panel{
-    background:var(--panel); border:1px solid var(--panel-border); border-radius:14px; padding:16px;
-    box-shadow:var(--shadow-panel); display:flex; flex-direction:column; align-items:center; gap:6px;
-  }
-  .ring-wrap{ position:relative; width:min(300px,100%); height:min(300px,100%); margin:8px 0; }
-  #ring{ width:100%; height:100%; display:block; }
-  .ring-callout{ position:absolute; transform:translateY(-50%); font-size:10.5px; line-height:1.3; white-space:nowrap; pointer-events:none; }
-  .ring-callout .rc-name{ font-weight:600; color:var(--text); }
-  .ring-callout .rc-change{ font-family:"JetBrains Mono",monospace; font-weight:700; font-variant-numeric:tabular-nums; }
-  .ring-callout.align-right{ text-align:left; }
-  .ring-callout.align-left{ text-align:right; transform:translate(-100%,-50%); }
-  .ring-center{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; pointer-events:none; }
-  .ring-center-value{ font-family:"JetBrains Mono",monospace; font-weight:700; font-size:22px; font-variant-numeric:tabular-nums; color:var(--text); }
-  .ring-center-label{ font-size:10.5px; color:var(--text-faint); margin-top:3px; line-height:1.4; max-width:130px; }
-  .ring-legend{ display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px 12px; margin-top:10px; font-size:10px; color:var(--text-muted); }
-  .ring-legend-item{ display:flex; align-items:center; gap:6px; }
-  .ring-legend-swatch{ width:10px; height:10px; border-radius:3px; }
+  .fb-panel{ background:var(--panel); border:1px solid var(--panel-border); border-radius:14px; padding:12px; box-shadow:var(--shadow-panel); }
+  .fb-head{ display:flex; align-items:center; justify-content:space-between; padding:2px 4px 10px; font-size:10.5px; color:var(--text-faint); font-family:"JetBrains Mono",monospace; text-transform:uppercase; letter-spacing:0.04em; }
+  .fb-head .primary{ color:var(--accent); }
+  .fb-list{ display:flex; flex-direction:column; gap:6px; }
+  .fb-card{ border:1px solid var(--panel-border); border-radius:10px; padding:9px 11px; cursor:pointer; }
+  .fb-card.is-group{ border-color:var(--accent-dim); }
+  .fb-card.is-solo{ border-color:#7a5a1f; }
+  .fb-top{ display:flex; align-items:baseline; gap:7px; }
+  .fb-chevron{ display:inline-block; width:9px; font-size:9px; color:var(--text-faint); transition:transform .15s ease; }
+  .fb-card.is-expanded .fb-chevron{ transform:rotate(90deg); color:var(--accent); }
+  .fb-rank{ font-family:"JetBrains Mono",monospace; font-size:11.5px; font-weight:700; color:var(--text-faint); }
+  .fb-card.is-group .fb-rank{ color:var(--accent); }
+  .fb-card.is-solo .fb-rank{ color:#e0a884; }
+  .fb-name{ font-size:13px; font-weight:600; flex-grow:1; }
+  .fb-verdict{ font-size:10px; font-weight:700; border-radius:99px; padding:2px 8px; white-space:nowrap; }
+  .fb-verdict.group{ color:#8ff0c4; background:rgba(69,216,184,0.12); border:1px solid var(--accent-dim); }
+  .fb-verdict.solo{ color:#e0a884; background:rgba(224,160,48,0.1); border:1px solid #7a5a1f; }
+  .fb-sub{ font-size:10.5px; color:var(--text-muted); margin:2px 0 7px 18px; }
+  .fb-money-row{ display:flex; align-items:baseline; justify-content:space-between; margin-left:18px; }
+  .fb-money-val{ font-family:"JetBrains Mono",monospace; font-size:15px; font-weight:700; color:#8ff0c4; }
+  .fb-money-pct{ font-size:10.5px; color:var(--text-muted); }
+  .fb-bar-track{ height:4px; border-radius:2px; background:var(--panel-border-soft); margin:4px 0 7px 18px; overflow:hidden; }
+  .fb-bar-fill{ height:100%; background:var(--accent); }
+  .fb-turnover{ font-size:9.5px; color:var(--text-faint); margin:2px 0 7px 18px; }
+  .fb-meta-row{ display:flex; align-items:center; justify-content:space-between; margin-left:18px; gap:10px; }
+  .fb-cont-label{ font-size:10.5px; font-weight:700; }
+  .fb-cont-bars{ display:flex; gap:2px; align-items:flex-end; height:13px; margin-top:3px; }
+  .fb-cont-bars span{ width:5px; border-radius:1.5px; display:inline-block; }
+  .fb-breadth{ display:flex; align-items:center; gap:5px; }
+  .fb-breadth-dots{ display:flex; gap:2px; flex-wrap:wrap; max-width:52px; }
+  .fb-breadth-dots span{ width:6px; height:6px; border-radius:2px; display:inline-block; }
+  .fb-frac{ font-family:"JetBrains Mono",monospace; font-size:10.5px; }
+  .fb-disp{ font-family:"JetBrains Mono",monospace; font-size:10.5px; white-space:nowrap; }
+  .fb-yoy{ font-size:9.5px; color:var(--text-faint); margin-top:2px; }
+  .fb-empty{ text-align:center; color:var(--text-faint); font-family:"JetBrains Mono",monospace; font-size:12px; padding:30px 0; }
 
-  .tooltip{
-    position:fixed; pointer-events:none; z-index:100; background:#1a2029; border:1px solid var(--panel-border);
-    border-radius:8px; padding:9px 12px; font-size:12px; color:var(--text); box-shadow:0 12px 28px -10px rgba(0,0,0,0.7);
-    opacity:0; transform:translate(-50%, calc(-100% - 10px)); transition:opacity .1s ease; white-space:nowrap;
-  }
-  .tooltip.show{ opacity:1; }
-  .tooltip .tt-name{ font-family:"Noto Serif TC","PingFang TC","Heiti TC","Microsoft JhengHei",serif; font-weight:700; font-size:13px; }
-  .tooltip .tt-row{ font-family:"JetBrains Mono",monospace; font-size:12px; margin-top:4px; font-variant-numeric:tabular-nums; }
-  .tooltip .tt-row b{ color:var(--text); font-weight:600; }
-
-  .table-panel{ background:var(--panel); border:1px solid var(--panel-border); border-radius:14px; padding:6px; box-shadow:var(--shadow-panel); overflow-x:auto; }
-  #flowTable{ width:100%; border-collapse:collapse; min-width:460px; }
-  #flowTable thead th{
-    text-align:right; font-size:10px; font-weight:600; color:var(--text-faint); padding:8px 8px;
-    cursor:pointer; user-select:none; white-space:nowrap; border-bottom:1px solid var(--panel-border-soft);
-  }
-  #flowTable thead th:first-child{ text-align:left; }
-  #flowTable thead th:hover{ color:var(--text-muted); }
-  #flowTable thead th .sort-arrow{ font-size:9px; margin-left:3px; opacity:0; color:var(--accent); }
-  #flowTable thead th.is-active .sort-arrow{ opacity:1; }
-  #flowTable tbody td{
-    text-align:right; padding:7px 8px; font-family:"JetBrains Mono",monospace; font-size:11.5px;
-    font-variant-numeric:tabular-nums; border-bottom:1px solid var(--panel-border-soft); white-space:nowrap;
-  }
-  #flowTable tbody td:first-child{ text-align:left; font-family:"Noto Sans TC",sans-serif; font-weight:500; font-size:11.5px; }
-  #flowTable tbody tr:last-child td{ border-bottom:none; }
-  #flowTable tbody tr:hover td{ background:rgba(255,255,255,0.02); }
-  #flowTable tbody tr.sector-row{ cursor:pointer; }
-  #flowTable tbody tr.sector-row.is-expanded td{ background:rgba(255,255,255,0.03); }
-  .rank-dot{ display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:8px; vertical-align:middle; }
-  .pct-bar-wrap{ display:inline-block; width:44px; height:6px; border-radius:3px; background:var(--panel-border-soft); vertical-align:middle; margin-right:8px; overflow:hidden; }
-  .pct-bar-fill{ height:100%; background:var(--accent-dim); }
-  .row-chevron{ display:inline-block; width:9px; margin-right:6px; font-size:9px; color:var(--text-faint); transition:transform .15s ease; vertical-align:middle; }
-  #flowTable tbody tr.sector-row.is-expanded .row-chevron{ transform:rotate(90deg); color:var(--accent); }
-  tr.stock-detail-row td{ padding:4px 8px 12px 24px; border-bottom:1px solid var(--panel-border-soft); background:rgba(255,255,255,0.015); }
-  tr.stock-detail-row:last-child td{ border-bottom:none; }
-  .stock-chip-wrap{ display:flex; flex-wrap:wrap; gap:6px; padding-top:4px; }
-  .stock-chip{
+  .fb-stocks{ display:none; flex-wrap:wrap; gap:6px; margin:9px 0 0 18px; padding-top:9px; border-top:1px solid var(--panel-border-soft); }
+  .fb-card.is-expanded .fb-stocks{ display:flex; }
+  .fb-chip{
     display:inline-flex; align-items:center; gap:5px; padding:4px 8px; border-radius:7px; font-size:11px;
-    line-height:1.3; white-space:nowrap; background:rgba(255,255,255,0.04); border:1px solid var(--panel-border-soft); text-decoration:none;
+    line-height:1.3; white-space:nowrap; background:rgba(255,255,255,0.04); border:1px solid var(--panel-border-soft);
   }
-  .stock-chip:hover{ border-color:var(--panel-border); }
-  .stock-chip .sc-code{ color:var(--text-faint); font-family:"JetBrains Mono",monospace; font-size:10px; }
-  .stock-chip .sc-name{ color:var(--text-muted); font-family:"Noto Sans TC",sans-serif; }
-  .stock-chip .sc-change{ font-family:"JetBrains Mono",monospace; font-weight:700; font-variant-numeric:tabular-nums; }
+  .fb-chip .fc-code{ color:var(--text-faint); font-family:"JetBrains Mono",monospace; font-size:10px; }
+  .fb-chip .fc-name{ color:var(--text-muted); font-family:"Noto Sans TC",sans-serif; }
+  .fb-chip .fc-change{ font-family:"JetBrains Mono",monospace; font-weight:700; font-variant-numeric:tabular-nums; }
 
   .footnote{ margin-top:24px; padding-top:14px; border-top:1px solid var(--panel-border-soft); color:var(--text-faint); font-size:11.5px; line-height:1.7; }
 </style>
@@ -229,7 +244,7 @@
   <header class="masthead">
     <div>
       <div class="brand-eyebrow">Taiwan Equities · Live Heatmap (Shared)</div>
-      <h1 class="brand-title">台股即時熱力圖<span style="font-size:14px;font-weight:500;color:var(--text-faint);margin-left:8px;">分享版</span></h1>
+      <h1 class="brand-title">台股即時熱力圖</h1>
     </div>
     <div class="status-row">
       <div class="search-wrap" id="searchCtl">
@@ -258,67 +273,39 @@
 
   <div class="combined-layout">
     <aside class="flow-side" id="flowSide">
-      <section class="ring-panel">
-        <div class="ring-wrap" id="ringWrap">
-          <canvas id="ring" width="840" height="840"></canvas>
-          <div class="ring-center">
-            <div class="ring-center-value" id="centerValue">—</div>
-            <div class="ring-center-label" id="centerLabel">≥5億族群合計</div>
-          </div>
+      <section class="fb-panel">
+        <div class="fb-head">
+          <span class="primary">全市場資金淨流入（第一優先）</span>
+          <span id="fbUpdated">尚未取得資料</span>
         </div>
-        <div class="ring-legend">
-          <span class="ring-legend-item"><span class="ring-legend-swatch" style="background:hsl(351,66%,46%)"></span>上漲</span>
-          <span class="ring-legend-item"><span class="ring-legend-swatch" style="background:hsl(220,6%,26%)"></span>持平</span>
-          <span class="ring-legend-item"><span class="ring-legend-swatch" style="background:hsl(150,58%,30%)"></span>下跌</span>
-          <span class="ring-legend-item">環寬 = 成交金額佔比</span>
-        </div>
-      </section>
-      <section class="table-panel">
-        <table id="flowTable">
-          <thead>
-            <tr>
-              <th data-key="name">族群<span class="sort-arrow">▼</span></th>
-              <th data-key="change">平均漲跌<span class="sort-arrow">▼</span></th>
-              <th data-key="amount" class="is-active">成交金額<span class="sort-arrow">▼</span></th>
-              <th data-key="share">佔比<span class="sort-arrow">▼</span></th>
-              <th data-key="marketShare">占大盤%<span class="sort-arrow">▼</span></th>
-            </tr>
-          </thead>
-          <tbody id="flowTbody"></tbody>
-        </table>
+        <div class="fb-list" id="fbList"></div>
+        <div class="fb-empty" id="fbEmpty" style="display:none;">目前沒有資料，稍後自動重試。</div>
       </section>
     </aside>
 
     <div class="board-side">
-      <div class="empty-hint" id="emptyHint">正在連線、抓取初始資料，第一次啟動可能要等幾秒鐘…</div>
+      <div class="empty-hint" id="emptyHint">正在連線、抓取初始資料，第一次開啟可能要等幾秒鐘（如果分享者的電腦剛好沒開著，畫面會停在他上次開著時的最後畫面）…</div>
       <main class="board" id="board" hidden></main>
       <div class="search-empty-state" id="searchEmptyState">找不到符合的個股</div>
     </div>
   </div>
 
-  <div class="tooltip" id="tooltipFlow">
-    <div class="tt-name"></div>
-    <div class="tt-row"></div>
-    <div class="tt-row"></div>
-  </div>
-
   <div class="footnote">
-    這是分享版：你看到的數字是分享者自己電腦上的即時熱力圖工具，每 5 秒把「算好的族群漲跌數字」
-    （不含任何帳號、API 金鑰等機密資訊）推到這個中繼網頁，再轉發給所有打開這個連結的人；分享者的
-    電腦跟交易帳號本身完全接觸不到，這個網頁後面沒有任何人能連進他的電腦。如果分享者的程式沒有在跑、
-    或他電腦離線，這一頁就會停在最後一次收到的畫面（可以看右上角「最後更新」的時間，太舊代表分享者
-    暫時沒在線上）。追蹤範圍是「全市場」上市+上櫃全部普通股（已排除 ETF、暫停交易個股），不是事先
-    手動挑的名單，每 5 秒左右重新批次查一次全市場快照、重新分組計算。
-    族群分類採用 TEJ 次產業分類（比證交所官方 35 大類細很多），查不到的極少數股票（多為近期新上市）
-    才退回官方分類。族群「平均漲跌」用成交金額加權，且把成交金額 &lt; 5000萬、沒有顯示出來的冷門股
-    也一起算進去，讓平均盡量反映整個族群真實表現；每個族群格子最多顯示「成交金額前6大」，其餘仍計入
-    族群名稱旁的檔數。族群排序＝族群裡（顯示出來的個股中）漲停家數（多→少），平手比平均漲跌；
-    族群內個股排序＝漲跌幅（高→低）。右上角搜尋框可以用代號或名稱找個股，找到會保留對應族群、
-    其餘淡出。「漲停板情緒」是全市場今日實際漲停/跌停家數（門檻 9.5%），每一輪都跟熱力圖資料一起重新算，
-    不受任何名單限制。左側「資金流向」圓環＋排行榜只看成交金額 ≥5億的族群（其餘小族群不列入圓環/排行榜，
-    但右側熱力圖仍會顯示），「占大盤%」是該族群成交金額占這一輪全市場（已排除ETF/暫停交易，含未達5000萬
-    門檻冷門股）總成交金額的比例，圓環中央顯示的則是「≥5億這些族群合計」占全市場的比例；點一下排行榜的
-    某一列可以展開看該族群全部個股（依漲幅排序）。僅供參考，非投資建議。
+    這是朋友分享給你看的台股即時熱力圖（唯讀，不需要登入、不會跟你要任何帳密）。資料直接來自分享者自己電腦上
+    的即時連線，經過一個不經手任何帳號密碼的中繼伺服器轉發給你，所以畫面會比分享者本機慢個一兩秒。
+    追蹤範圍是「全市場」上市+上櫃全部普通股（已排除 ETF、暫停交易個股），不是事先手動挑的名單；每 5 秒
+    左右重新整理一次，時間看右上角「最後更新」。族群分類採用 TEJ 次產業分類（比證交所官方 35 大類細很多）。
+    族群「平均漲跌」用成交金額加權，且把成交金額 &lt; 5000萬、沒有顯示出來的冷門股也一起算進去，讓平均盡量
+    反映整個族群真實表現；每個族群格子最多顯示「成交金額前6大」，其餘仍計入族群名稱旁的檔數。右上角搜尋框
+    可以用代號或名稱找個股，找到會保留對應族群、其餘淡出。「漲停板情緒」是全市場今日實際漲停/跌停家數
+    （門檻 9.5%）。左側「資金流向排行榜」依族群「淨流入金額」（漲的股票成交金額算+、跌的算-，不是不分漲跌
+    方向的原始成交金額）由大到小排序——這樣才不會把「一檔股票爆量下跌」誤判成「資金流入」；旁邊另外列出
+    「總成交」當參考，看這個族群今天單純有多熱鬧、不分漲跌方向。「族群廣度」「分散度」用目前顯示出來的
+    代表股（成交金額前6大）算，判斷是不是整族群一起動、還是一兩檔大單在拉；「資金連續性」是分享者那邊
+    累積的近幾天同時段比較。右側熱力圖格子右上角出現💰代表這檔股票「預估全天成交金額」明顯超過（1.5倍以上）
+    自己最近5個交易日的平均量，滑鼠移到格子上可以看到詳細倍數；開盤前30分鐘不估算、也不標記。這個分享版
+    沒有「點格子看單檔即時報價」跟「回朔查看歷史」這兩個功能（都需要連回分享者自己的電腦，對你沒有意義）。
+    僅供參考，非投資建議。
   </div>
 </div>
 
@@ -326,6 +313,8 @@
 (function(){
   var LIMIT = 9.5;
   var NEAR_LIMIT = 9.0;
+  var NEAR_ALERT_THRESHOLD = 8.5;
+  var FIRE_SURGE_THRESHOLD = 5.0;
 
   var board = document.getElementById("board");
   var emptyHint = document.getElementById("emptyHint");
@@ -339,8 +328,6 @@
   var searchInput = document.getElementById("search");
   var searchEmptyState = document.getElementById("searchEmptyState");
 
-  // 搜尋代號/名稱：不影響資料本身，只是把不符合的格子淡出、整個族群都不符合就整片隱藏。
-  // 每次 render() 重繪完都會重新呼叫一次，這樣新出現/搬動位置的格子也會套用目前的搜尋狀態。
   function applySearchFilter(){
     var q = searchInput.value.trim().toLowerCase();
     var anyVisible = false;
@@ -364,8 +351,6 @@
   }
   searchInput.addEventListener("input", applySearchFilter);
 
-  // 全市場（不是這頁追蹤名單）今日漲停/跌停家數，伺服器每 60 秒左右重新掃描一次。
-  // 查不到（剛啟動、或這一輪查詢失敗）時 ls 會是 null，這種情況保留上一次顯示的數字，不要清空。
   function renderLimitSentiment(ls){
     if (!ls) return;
     sentimentPanel.hidden = false;
@@ -375,10 +360,17 @@
     scDownBreak.textContent = "上市 " + ls.downTse + "｜上櫃 " + ls.downOtc;
   }
 
-  // code -> 上一輪的 change，用來判斷這次有沒有變，變了就閃一下 cell 提示「這格剛更新」
+  var TRADING_MINUTES = 270;
+  var currentElapsedMin = 0;
+  var VOL_ESTIMATE_MIN_ELAPSED_MIN = 30;
+  var VOL_RATIO_ALERT = 1.5;
+  var volumeBaseline = {};  // code -> 5日均量(張)，隨每輪websocket訊息一起更新，不用另外打API
+
   var lastChange = {};
-  var cellEls = {};   // code -> cell 元素（重繪時盡量重用，不要整個 board 砍掉重建，閃爍/捲動位置才不會抖動）
-  var panelEls = {};  // sector -> panel section 元素
+  var cellEls = {};
+  var panelEls = {};
+  var REORDER_INTERVAL_MS = 60000;
+  var lastReorderAt = 0;
 
   function colorForChange(change){
     var isLimit = Math.abs(change) >= LIMIT;
@@ -392,11 +384,22 @@
     }
   }
 
-  // stocks 是 [[code,name,change,amount], ...]（跟另外兩個 claude.ai 網頁的格式一致）
-  function countLimitUp(stocks){
-    var n = 0;
-    for (var i=0;i<stocks.length;i++) if (stocks[i][2] >= LIMIT) n++;
-    return n;
+  function hasFireSignal(stocks){
+    var hasLocked = false, hasOtherSurging = false;
+    for (var i=0;i<stocks.length;i++){
+      var chg = stocks[i][2];
+      if (chg >= LIMIT) hasLocked = true;
+      else if (chg >= FIRE_SURGE_THRESHOLD) hasOtherSurging = true;
+    }
+    return hasLocked && hasOtherSurging;
+  }
+
+  function hasNearLimitSignal(stocks){
+    for (var i=0;i<stocks.length;i++){
+      var chg = stocks[i][2];
+      if (chg >= NEAR_ALERT_THRESHOLD && chg < LIMIT) return true;
+    }
+    return false;
   }
 
   function ensurePanel(sectorName){
@@ -411,6 +414,16 @@
     var countEl = document.createElement("span");
     countEl.className = "panel-count";
     name.appendChild(countEl);
+    var nearEl = document.createElement("span");
+    nearEl.className = "panel-near";
+    nearEl.textContent = "⚡";
+    nearEl.title = "有人快漲停：族群裡有個股衝進8.5%~9.5%快漲停區間，還沒鎖住";
+    name.appendChild(nearEl);
+    var fireEl = document.createElement("span");
+    fireEl.className = "panel-fire";
+    fireEl.textContent = "🔥";
+    fireEl.title = "族群起火：已有個股鎖漲停，其他個股也開始跟漲";
+    name.appendChild(fireEl);
     var avgEl = document.createElement("span");
     avgEl.className = "panel-avg";
     head.appendChild(name);
@@ -419,14 +432,14 @@
     cells.className = "cells";
     panel.appendChild(head);
     panel.appendChild(cells);
-    panelEls[sectorName] = { panel: panel, countEl: countEl, avgEl: avgEl, cells: cells };
+    panelEls[sectorName] = { panel: panel, countEl: countEl, avgEl: avgEl, nearEl: nearEl, fireEl: fireEl, cells: cells };
     return panelEls[sectorName];
   }
 
+  // 分享版沒有「點格子看單檔即時報價」功能（那個連的是分享者自己電腦，對你沒有意義），
+  // 所以格子用<div>不用<a>，不會誤導成可以點進去。
   function ensureCell(code){
     if (cellEls[code]) return cellEls[code];
-    // 分享版沒有「點格子開單檔即時報價視窗」這個功能——那個功能連的是本機 localhost，
-    // 對看這個公開網址的人來說沒有意義（他們的 localhost 是他們自己的電腦，不是分享者的）。
     var cell = document.createElement("div");
     cell.className = "cell";
     cell.dataset.code = code;
@@ -436,26 +449,31 @@
     nameEl.className = "cell-name";
     var changeEl = document.createElement("div");
     changeEl.className = "cell-change";
+    var volEl = document.createElement("span");
+    volEl.className = "cell-vol-badge";
+    volEl.textContent = "💰";
     cell.appendChild(codeEl);
     cell.appendChild(nameEl);
     cell.appendChild(changeEl);
-    cellEls[code] = { cell: cell, codeEl: codeEl, nameEl: nameEl, changeEl: changeEl };
+    cell.appendChild(volEl);
+    cellEls[code] = { cell: cell, codeEl: codeEl, nameEl: nameEl, changeEl: changeEl, volEl: volEl };
     return cellEls[code];
   }
 
-  // sectors：[{s, avgChange, count, stocks:[[code,name,change,amount],...]}, ...]，
-  // avgChange／count 是伺服器已經算好的（含全市場加權、含被濾掉的冷門股），前端不用再重算。
   function render(sectors){
     if (!sectors.length) return;
     emptyHint.classList.add("hide");
     board.hidden = false;
 
-    // 族群排序＝族群裡（顯示出來的個股中）漲停家數（多→少），平手比平均漲跌，跟另外兩個 claude.ai 網頁一致
     var sorted = sectors.slice().sort(function(a, b){
-      var la = countLimitUp(a.stocks), lb = countLimitUp(b.stocks);
-      if (lb !== la) return lb - la;
+      var na = a.netAmount || 0, nb = b.netAmount || 0;
+      if (nb !== na) return nb - na;
       return b.avgChange - a.avgChange;
     });
+
+    var now = Date.now();
+    var shouldReorder = (now - lastReorderAt) >= REORDER_INTERVAL_MS;
+    if (shouldReorder) lastReorderAt = now;
 
     var seenPanels = {};
     var prevEl = null;
@@ -466,15 +484,22 @@
         return (b[3]||0) - (a[3]||0);
       });
       var p = ensurePanel(sector.s);
-      if (prevEl == null) {
-        if (board.firstChild !== p.panel) board.insertBefore(p.panel, board.firstChild);
-      } else if (prevEl.nextSibling !== p.panel) {
-        board.insertBefore(p.panel, prevEl.nextSibling);
+      var isNewPanel = !p.panel.parentNode;
+      if (shouldReorder){
+        if (prevEl == null) {
+          if (board.firstChild !== p.panel) board.insertBefore(p.panel, board.firstChild);
+        } else if (prevEl.nextSibling !== p.panel) {
+          board.insertBefore(p.panel, prevEl.nextSibling);
+        }
+        prevEl = p.panel;
+      } else if (isNewPanel){
+        board.appendChild(p.panel);
       }
-      prevEl = p.panel;
 
       p.countEl.textContent = (sector.count <= 1 ? "只有1檔" : sector.count + "檔");
       p.countEl.className = "panel-count" + (sector.count <= 1 ? " is-thin" : "");
+      p.nearEl.className = "panel-near" + (hasNearLimitSignal(sector.stocks) ? " is-active" : "");
+      p.fireEl.className = "panel-fire" + (hasFireSignal(sector.stocks) ? " is-active" : "");
       var a = sector.avgChange;
       p.avgEl.textContent = (a >= 0 ? "+" : "") + a.toFixed(1) + "%";
       p.avgEl.style.color = a >= 0 ? "hsl(351,70%,66%)" : "hsl(150,55%,58%)";
@@ -482,22 +507,26 @@
       var seenCells = {};
       var prevCellEl = null;
       sStocks.forEach(function(st){
-        var code = st[0], name = st[1], change = st[2], amount = st[3];
+        var code = st[0], name = st[1], change = st[2], amount = st[3], volume = st[4];
         seenCells[code] = true;
         var c = ensureCell(code);
+        var isNewCell = !c.cell.parentNode;
         c.cell.dataset.name = name;
         c.cell.dataset.sector = sector.s;
-        if (prevCellEl == null){
-          if (p.cells.firstChild !== c.cell) p.cells.insertBefore(c.cell, p.cells.firstChild);
-        } else if (prevCellEl.nextSibling !== c.cell){
-          p.cells.insertBefore(c.cell, prevCellEl.nextSibling);
+        if (shouldReorder){
+          if (prevCellEl == null){
+            if (p.cells.firstChild !== c.cell) p.cells.insertBefore(c.cell, p.cells.firstChild);
+          } else if (prevCellEl.nextSibling !== c.cell){
+            p.cells.insertBefore(c.cell, prevCellEl.nextSibling);
+          }
+          prevCellEl = c.cell;
+        } else if (isNewCell){
+          p.cells.appendChild(c.cell);
         }
-        prevCellEl = c.cell;
 
         var col = colorForChange(change);
         var isLimit = !!col.key;
-        // 用絕對值判斷，漲到9%（快漲停）跟跌到9%（快跌停）都算「快到了」，兩邊都要閃
-        var isNear = Math.abs(change) >= NEAR_LIMIT && Math.abs(change) < LIMIT;
+        var isNear = change >= NEAR_LIMIT && change < LIMIT;
         c.cell.className = "cell" + (isLimit ? " is-limit" : (isNear ? " is-near" : ""));
         if (isLimit){
           var limitBg = col.key === "#ff2d4d" ? "hsl(351,72%,34%)" : "hsl(150,64%,22%)";
@@ -510,9 +539,12 @@
         } else {
           c.cell.style.background = col.bg;
           c.cell.style.color = col.fg;
-          // is-near 的閃爍（box-shadow 明暗交替）交給 CSS 的 nearGlow 動畫負責，這裡不要另外設定固定的
-          // inline box-shadow，否則會跟動畫互相打架、閃爍效果會被蓋掉。
           c.cell.style.boxShadow = isNear ? "" : "none";
+          if (isNear){
+            c.cell.style.setProperty("--near-glow-color", change >= 0 ? "#ff2d4d" : "#17e08c");
+          } else {
+            c.cell.style.removeProperty("--near-glow-color");
+          }
           c.codeEl.style.color = col.fg;
           c.nameEl.style.color = col.fg;
           c.changeEl.style.color = col.fg;
@@ -520,9 +552,32 @@
         c.codeEl.textContent = code;
         c.nameEl.textContent = name;
         c.changeEl.textContent = (change >= 0 ? "+" : "") + change.toFixed(2) + "%";
-        c.cell.title = name + "　" + (change>=0?"+":"") + change.toFixed(2) + "%　成交金額約 " + (amount ? Math.round(amount/1e8) : 0) + "億";
+        var titleTxt = name + "　" + (change>=0?"+":"") + change.toFixed(2) + "%　成交金額約 " + (amount ? Math.round(amount/1e8) : 0) + "億";
+        var showVolBadge = false;
+        var estVolume = null, isEstimate = false;
+        if (volume && currentElapsedMin > VOL_ESTIMATE_MIN_ELAPSED_MIN && currentElapsedMin < TRADING_MINUTES){
+          estVolume = volume / currentElapsedMin * TRADING_MINUTES;
+          isEstimate = true;
+        } else if (volume && currentElapsedMin >= TRADING_MINUTES){
+          estVolume = volume;
+        }
+        if (estVolume){
+          titleTxt += (isEstimate ? "　預估全天成交量約 " : "　當日成交量約 ") + Math.round(estVolume).toLocaleString('zh-TW') + "張";
+          var baseline = volumeBaseline[code];
+          if (baseline){
+            var ratio = estVolume / baseline;
+            titleTxt += "（5日均量 " + Math.round(baseline).toLocaleString('zh-TW') + "張，約" + ratio.toFixed(1) + "倍）";
+            if (ratio >= VOL_RATIO_ALERT){
+              showVolBadge = true;
+              titleTxt += "　💰量能偏大";
+            }
+          } else {
+            titleTxt += "（5日均量基準還沒準備好）";
+          }
+        }
+        c.volEl.classList.toggle("is-active", showVolBadge);
+        c.cell.title = titleTxt;
 
-        // 這格數字有變的話，短暫加一個白色外框提示「剛更新」
         if (lastChange[code] !== undefined && lastChange[code] !== change){
           c.cell.classList.add("flash");
           setTimeout((function(cellEl){ return function(){ cellEl.classList.remove("flash"); }; })(c.cell), 900);
@@ -530,7 +585,6 @@
         lastChange[code] = change;
       });
 
-      // 這個族群裡，這一輪不再顯示的格子（例如成交金額掉到門檻以下）就移掉，避免殘留舊資料
       Array.prototype.slice.call(p.cells.children).forEach(function(cellEl){
         var code = cellEl.dataset.code;
         if (code && !seenCells[code]){
@@ -540,7 +594,6 @@
       });
     });
 
-    // 這一輪完全消失的族群（例如全部個股都冷門到被濾掉）就把整個面板移掉
     Object.keys(panelEls).forEach(function(name){
       if (!seenPanels[name]){
         panelEls[name].panel.remove();
@@ -552,334 +605,183 @@
   }
 
   // ===================================================================
-  // 資金流向（圓環＋排行榜）：跟另外兩個 claude.ai 網頁同一套邏輯（族群分類、5億門檻、
-  // 加權平均），差別是這裡每一輪新資料進來都要重畫，不是畫一次就結束。
+  // 資金流向排行榜（左側欄）：分享版沒有獨立的 /api/flow-board 可以打，改成直接吃
+  // 同一條websocket訊息裡夾帶的 flowBoard 欄位，每輪跟著熱力圖一起更新。
+  // 分享版也沒有「回朔」功能（那需要分享者本機的歷史存檔，對朋友沒有意義）。
   // ===================================================================
-  var MIN_FLOW_AMOUNT = 5e8; // 只看成交金額 >= 5億的族群，太小的族群不佔圓環/排行榜版面（熱力圖仍會顯示）
-
-  function ringColorForChange(change){
-    var t = Math.max(0, Math.min(1, Math.abs(change) / 10));
-    if (Math.abs(change) < 0.05) return "hsl(220,6%,26%)";
-    if (change >= 0){
-      var sat = 30 + t * 46, light = 26 + t * 22;
-      return "hsl(351," + sat + "%," + light + "%)";
-    } else {
-      var sat2 = 26 + t * 42, light2 = 20 + t * 20;
-      return "hsl(150," + sat2 + "%," + light2 + "%)";
-    }
-  }
   function formatYiPlain(yi){ return Math.round(yi).toLocaleString("zh-TW") + "億"; }
-  function formatYi(amount){ return formatYiPlain(amount / 1e8); }
 
-  var ringCanvas = document.getElementById("ring");
-  var ringCtx = ringCanvas.getContext("2d");
-  var ringW = ringCanvas.width, ringH = ringCanvas.height;
-  var ringCx = ringW/2, ringCy = ringH/2;
-  var ringOuterR = ringW * 0.295;
-  var ringInnerR = ringOuterR * 0.60;
-  var ringGap = 0.014;
-  var ringWrap = document.getElementById("ringWrap");
-  var centerValueEl = document.getElementById("centerValue");
-  var centerLabelEl = document.getElementById("centerLabel");
-  var flowTooltip = document.getElementById("tooltipFlow");
-  var flowTtName = flowTooltip.querySelector(".tt-name");
-  var flowTtRows = flowTooltip.querySelectorAll(".tt-row");
-  var flowTbody = document.getElementById("flowTbody");
+  var fbList = document.getElementById("fbList");
+  var fbEmpty = document.getElementById("fbEmpty");
+  var fbUpdated = document.getElementById("fbUpdated");
 
-  var flowSectors = [];     // 目前這一輪、通過 5億門檻的族群（ring/table 共用）
-  var ringSegments = [];    // 圓環目前的分段（給滑鼠移入判斷用，每次 renderFlow 都會重算）
-  var flowSortKey = "amount";
-  var flowSortDir = -1;
-  var flowExpanded = {};    // 族群名稱 -> true，記錄目前點開哪些族群，重新排序/重繪後要保留展開狀態
-
-  function drawRing(hoverIdx){
-    ringCtx.clearRect(0, 0, ringW, ringH);
-    ringSegments.forEach(function(seg, i){
-      var isHover = i === hoverIdx;
-      var r0 = ringInnerR, r1 = isHover ? ringOuterR + 8 : ringOuterR;
-      ringCtx.beginPath();
-      ringCtx.arc(ringCx, ringCy, r1, seg.start, seg.end, false);
-      ringCtx.arc(ringCx, ringCy, r0, seg.end, seg.start, true);
-      ringCtx.closePath();
-      ringCtx.fillStyle = ringColorForChange(seg.sector.change);
-      ringCtx.globalAlpha = (hoverIdx == null || isHover) ? 1 : 0.38;
-      ringCtx.fill();
-      if (isHover){
-        ringCtx.lineWidth = 2;
-        ringCtx.strokeStyle = "rgba(255,255,255,0.55)";
-        ringCtx.stroke();
-      }
-    });
-    ringCtx.globalAlpha = 1;
-    ringCtx.lineWidth = 1.5;
-    ringCtx.strokeStyle = "rgba(125,135,151,0.55)";
-    ringSegments.forEach(function(seg){
-      if (!seg.callout) return;
-      var p = seg.callout;
-      var extraX = p.cos >= 0 ? 30 : -30;
-      ringCtx.beginPath();
-      ringCtx.moveTo(p.x1, p.y1);
-      ringCtx.lineTo(p.x2, p.y2);
-      ringCtx.lineTo(p.x2 + extraX, p.y2);
-      ringCtx.stroke();
-    });
+  function fbFmtPct(x, digits){
+    if(x === null || x === undefined || isNaN(x)) return "—";
+    digits = digits === undefined ? 1 : digits;
+    return (x >= 0 ? "+" : "") + x.toFixed(digits) + "%";
   }
 
-  function segAt(mx, my){
-    var dx = mx - ringCx, dy = my - ringCy;
-    var dist = Math.sqrt(dx*dx + dy*dy);
-    if (dist < ringInnerR || dist > ringOuterR + 10) return -1;
-    var ang = Math.atan2(dy, dx);
-    for (var i=0;i<ringSegments.length;i++){
-      var seg = ringSegments[i];
-      var a = ang;
-      while (a < seg.start) a += Math.PI*2;
-      while (a > seg.start + Math.PI*2) a -= Math.PI*2;
-      if (a >= seg.start && a <= seg.end) return i;
-    }
-    return -1;
-  }
+  var fbExpanded = {};
 
-  ringCanvas.addEventListener("mousemove", function(e){
-    var rect = ringCanvas.getBoundingClientRect();
-    var scaleX = ringW / rect.width, scaleY = ringH / rect.height;
-    var mx = (e.clientX - rect.left) * scaleX;
-    var my = (e.clientY - rect.top) * scaleY;
-    var idx = segAt(mx, my);
-    if (idx === -1){
-      ringCanvas.style.cursor = "default";
-      flowTooltip.classList.remove("show");
-      drawRing(null);
-      return;
-    }
-    ringCanvas.style.cursor = "pointer";
-    drawRing(idx);
-    var s = ringSegments[idx].sector;
-    flowTtName.textContent = s.name;
-    flowTtRows[0].innerHTML = "平均漲跌　<b style=\"color:" + (s.change>=0?"hsl(351,70%,68%)":"hsl(150,55%,60%)") + "\">" + (s.change>=0?"+":"") + s.change.toFixed(2) + "%</b>";
-    flowTtRows[1].innerHTML = "成交金額　<b>" + formatYiPlain(s.amount/1e8) + "</b>　佔比　<b>" + (s.share*100).toFixed(1) + "%</b>" +
-      (s.marketShare != null ? "　占大盤　<b>" + (s.marketShare*100).toFixed(2) + "%</b>" : "");
-    flowTooltip.style.left = e.clientX + "px";
-    flowTooltip.style.top = e.clientY + "px";
-    flowTooltip.classList.add("show");
-  });
-  ringCanvas.addEventListener("mouseleave", function(){
-    flowTooltip.classList.remove("show");
-    drawRing(null);
-  });
+  function renderFlowCard(s, i){
+    var isGroup = s.isGroupEffect;
+    var isExpanded = !!fbExpanded[s.sector];
+    var card = document.createElement("div");
+    card.className = "fb-card " + (isGroup ? "is-group" : "is-solo") + (isExpanded ? " is-expanded" : "");
+    card.addEventListener("click", function(){
+      fbExpanded[s.sector] = !fbExpanded[s.sector];
+      card.classList.toggle("is-expanded", fbExpanded[s.sector]);
+    });
 
-  function renderStockDetailRow(s){
-    var tr = document.createElement("tr");
-    tr.className = "stock-detail-row";
-    var td = document.createElement("td");
-    td.colSpan = 5;
-    var wrap = document.createElement("div");
-    wrap.className = "stock-chip-wrap";
-    var stocksSorted = (s.allStocks || s.stocks).slice().sort(function(a, b){ return b[2] - a[2]; });
+    var top = document.createElement("div");
+    top.className = "fb-top";
+    var chevron = document.createElement("span");
+    chevron.className = "fb-chevron";
+    chevron.textContent = "▸";
+    var rank = document.createElement("span");
+    rank.className = "fb-rank";
+    rank.textContent = String(i + 1);
+    var name = document.createElement("span");
+    name.className = "fb-name";
+    name.textContent = s.sector;
+    var verdict = document.createElement("span");
+    verdict.className = "fb-verdict " + (isGroup ? "group" : "solo");
+    verdict.textContent = isGroup ? "族群效應" : "個股帶動";
+    top.appendChild(chevron); top.appendChild(rank); top.appendChild(name); top.appendChild(verdict);
+    card.appendChild(top);
+
+    var sub = document.createElement("div");
+    sub.className = "fb-sub";
+    sub.textContent = "均漲 " + fbFmtPct(s.avgChange);
+    card.appendChild(sub);
+
+    var isInflow = (s.netAmount || 0) >= 0;
+    var flowColor = isInflow ? "hsl(351,70%,66%)" : "hsl(150,55%,58%)";
+    var moneyRow = document.createElement("div");
+    moneyRow.className = "fb-money-row";
+    moneyRow.innerHTML = '<span class="fb-money-val" style="color:' + flowColor + ';">' +
+        (isInflow ? "淨流入 " : "淨流出 ") + formatYiPlain(Math.abs(s.netAmount) / 1e8) + '</span>' +
+      '<span class="fb-money-pct">占大盤淨額 ' + fbFmtPct(s.netAmountPct) + '</span>';
+    card.appendChild(moneyRow);
+
+    var barTrack = document.createElement("div");
+    barTrack.className = "fb-bar-track";
+    var barFill = document.createElement("div");
+    barFill.className = "fb-bar-fill";
+    barFill.style.background = flowColor;
+    barFill.style.width = Math.max(4, Math.min(100, Math.abs(s.netAmountPct || 0) * 4)) + "%";
+    barTrack.appendChild(barFill);
+    card.appendChild(barTrack);
+
+    var turnoverEl = document.createElement("div");
+    turnoverEl.className = "fb-turnover";
+    turnoverEl.textContent = "總成交 " + formatYiPlain(s.amount / 1e8) + "・占大盤 " + fbFmtPct(s.amountPct);
+    card.appendChild(turnoverEl);
+
+    var metaRow = document.createElement("div");
+    metaRow.className = "fb-meta-row";
+
+    var contWrap = document.createElement("div");
+    var c = s.continuity || {};
+    var labelColor = c.accumulating ? "var(--text-faint)" : (c.streak >= 4 ? "var(--accent)" : (c.streak >= 2 ? "var(--text)" : "var(--text-muted)"));
+    var labelEl = document.createElement("div");
+    labelEl.className = "fb-cont-label";
+    labelEl.style.color = labelColor;
+    labelEl.textContent = c.label || "—";
+    contWrap.appendChild(labelEl);
+    var bars = document.createElement("div");
+    bars.className = "fb-cont-bars";
+    var flags = (c.days || []).slice(-5);
+    for(var p = 0; p < 5 - flags.length; p++){
+      var ph = document.createElement("span");
+      ph.style.height = "5px"; ph.style.background = "var(--panel-border)";
+      bars.appendChild(ph);
+    }
+    flags.forEach(function(up){
+      var bar = document.createElement("span");
+      bar.style.height = up ? "13px" : "5px";
+      bar.style.background = up ? "var(--accent)" : "#2a3040";
+      bars.appendChild(bar);
+    });
+    contWrap.appendChild(bars);
+    var yoyEl = document.createElement("div");
+    yoyEl.className = "fb-yoy";
+    yoyEl.textContent = "較昨日 " + (s.yoyPct == null ? "—" : fbFmtPct(s.yoyPct));
+    contWrap.appendChild(yoyEl);
+    metaRow.appendChild(contWrap);
+
+    var rightWrap = document.createElement("div");
+    rightWrap.style.textAlign = "right";
+    var breadthWrap = document.createElement("div");
+    breadthWrap.className = "fb-breadth";
+    var dots = document.createElement("div");
+    dots.className = "fb-breadth-dots";
+    (s.stocks || []).slice().sort(function(a, b){ return b[2] - a[2]; }).forEach(function(st){
+      var dot = document.createElement("span");
+      var chg = st[2];
+      dot.style.background = chg >= 8 ? "hsl(351,92%,64%)" : (chg > 0 ? "hsl(351,66%,50%)" : (chg < 0 ? "hsl(150,55%,42%)" : "#4d5563"));
+      if (chg >= 8) dot.style.boxShadow = "0 0 4px 1px rgba(255,45,77,0.75)";
+      dots.appendChild(dot);
+    });
+    var frac = document.createElement("span");
+    frac.className = "fb-frac";
+    frac.textContent = (s.upCount != null ? s.upCount : "—") + "/" + (s.stockCount != null ? s.stockCount : "—");
+    breadthWrap.appendChild(dots); breadthWrap.appendChild(frac);
+    rightWrap.appendChild(breadthWrap);
+    var disp = document.createElement("div");
+    disp.className = "fb-disp";
+    disp.style.marginTop = "4px";
+    disp.textContent = "分散度 " + fbFmtPct(s.dispersion, 0);
+    rightWrap.appendChild(disp);
+    metaRow.appendChild(rightWrap);
+
+    card.appendChild(metaRow);
+
+    // 分享版沒有「點格子看單檔即時報價」功能，代表股晶片用<span>不用<a>
+    var stocksWrap = document.createElement("div");
+    stocksWrap.className = "fb-stocks";
+    var stocksSorted = (s.stocks || []).slice().sort(function(a, b){ return b[2] - a[2]; });
     stocksSorted.forEach(function(st){
       var code = st[0], sname = st[1], change = st[2];
       var chip = document.createElement("span");
-      chip.className = "stock-chip";
+      chip.className = "fb-chip";
+      chip.addEventListener("click", function(e){ e.stopPropagation(); });
       var codeEl = document.createElement("span");
-      codeEl.className = "sc-code";
+      codeEl.className = "fc-code";
       codeEl.textContent = code;
       var nameEl = document.createElement("span");
-      nameEl.className = "sc-name";
+      nameEl.className = "fc-name";
       nameEl.textContent = sname;
       var changeEl = document.createElement("span");
-      changeEl.className = "sc-change";
+      changeEl.className = "fc-change";
       changeEl.textContent = (change >= 0 ? "+" : "") + change.toFixed(1) + "%";
       changeEl.style.color = change >= 0 ? "hsl(351,70%,66%)" : (change <= -0.05 ? "hsl(150,55%,58%)" : "var(--text-muted)");
-      chip.appendChild(codeEl);
-      chip.appendChild(nameEl);
-      chip.appendChild(changeEl);
-      wrap.appendChild(chip);
+      chip.appendChild(codeEl); chip.appendChild(nameEl); chip.appendChild(changeEl);
+      stocksWrap.appendChild(chip);
     });
-    td.appendChild(wrap);
-    tr.appendChild(td);
-    return tr;
+    card.appendChild(stocksWrap);
+
+    return card;
   }
 
-  function renderFlowTable(){
-    var rows = flowSectors.slice().sort(function(a, b){
-      if (flowSortKey === "name"){
-        return flowSortDir * String(a.name).localeCompare(String(b.name), "zh-Hant");
-      }
-      var av = flowSortKey === "share" ? a.share : a[flowSortKey];
-      var bv = flowSortKey === "share" ? b.share : b[flowSortKey];
-      if (av == null) av = -Infinity;
-      if (bv == null) bv = -Infinity;
-      return flowSortDir * (av - bv);
-    });
-    flowTbody.innerHTML = "";
-    rows.forEach(function(s){
-      var isExpanded = !!flowExpanded[s.name];
-      var tr = document.createElement("tr");
-      tr.className = "sector-row" + (isExpanded ? " is-expanded" : "");
-      tr.addEventListener("click", function(){
-        flowExpanded[s.name] = !flowExpanded[s.name];
-        renderFlowTable();
-      });
-
-      var tdName = document.createElement("td");
-      var chevron = document.createElement("span");
-      chevron.className = "row-chevron";
-      chevron.textContent = "▸";
-      tdName.appendChild(chevron);
-      var dot = document.createElement("span");
-      dot.className = "rank-dot";
-      dot.style.background = ringColorForChange(s.change);
-      tdName.appendChild(dot);
-      tdName.appendChild(document.createTextNode(s.name));
-      tr.appendChild(tdName);
-
-      var tdChange = document.createElement("td");
-      tdChange.textContent = (s.change>=0?"+":"") + s.change.toFixed(2) + "%";
-      tdChange.style.color = s.change>=0 ? "hsl(351,70%,66%)" : (s.change<=-0.05 ? "hsl(150,55%,58%)" : "var(--text-muted)");
-      tdChange.style.fontWeight = "700";
-      tr.appendChild(tdChange);
-
-      var tdAmount = document.createElement("td");
-      tdAmount.textContent = formatYiPlain(s.amount/1e8);
-      tr.appendChild(tdAmount);
-
-      var tdShare = document.createElement("td");
-      var barWrap = document.createElement("span");
-      barWrap.className = "pct-bar-wrap";
-      var barFill = document.createElement("span");
-      barFill.className = "pct-bar-fill";
-      barFill.style.width = (s.share*100).toFixed(1) + "%";
-      barWrap.appendChild(barFill);
-      tdShare.appendChild(barWrap);
-      tdShare.appendChild(document.createTextNode((s.share*100).toFixed(1) + "%"));
-      tr.appendChild(tdShare);
-
-      var tdMarketShare = document.createElement("td");
-      tdMarketShare.textContent = (s.marketShare != null) ? (s.marketShare*100).toFixed(2) + "%" : "—";
-      tr.appendChild(tdMarketShare);
-
-      flowTbody.appendChild(tr);
-      if (isExpanded) flowTbody.appendChild(renderStockDetailRow(s));
-    });
-  }
-
-  document.querySelectorAll("#flowTable thead th").forEach(function(th){
-    th.addEventListener("click", function(){
-      var key = th.dataset.key;
-      if (flowSortKey === key){
-        flowSortDir = flowSortDir * -1;
-      } else {
-        flowSortKey = key;
-        flowSortDir = -1;
-      }
-      document.querySelectorAll("#flowTable thead th").forEach(function(t){
-        t.classList.toggle("is-active", t === th);
-        t.querySelector(".sort-arrow").textContent = flowSortDir === -1 ? "▼" : "▲";
-      });
-      renderFlowTable();
-    });
-  });
-
-  // sectors：跟 render() 收到的是同一份資料（每個 sector 多了 amount／allStocks 兩個欄位）。
-  // totalMarketAmount：伺服器這一輪「全市場」（已排除ETF/暫停交易）成交金額加總，算「占大盤%」的分母。
-  function renderFlow(sectors, totalMarketAmount){
-    flowSectors = sectors.map(function(sec){
-      return { name: sec.s, amount: sec.amount || 0, change: sec.avgChange, count: sec.count,
-               stocks: sec.stocks, allStocks: sec.allStocks || sec.stocks };
-    }).filter(function(s){ return s.amount >= MIN_FLOW_AMOUNT; });
-
-    if (!flowSectors.length) return;
-
-    var trackedTotal = flowSectors.reduce(function(sum, s){ return sum + s.amount; }, 0);
-    flowSectors.forEach(function(s){
-      s.share = trackedTotal > 0 ? s.amount / trackedTotal : 0;
-      s.marketShare = (totalMarketAmount && totalMarketAmount > 0) ? s.amount / totalMarketAmount : null;
-    });
-
-    var ringOrder = flowSectors.slice().sort(function(a, b){ return b.amount - a.amount; });
-
-    // 重算圓環分段
-    ringSegments = [];
-    (function build(){
-      var start = -Math.PI/2;
-      ringOrder.forEach(function(s){
-        var sweep = s.share * Math.PI * 2;
-        var segStart = start + ringGap/2;
-        var segEnd = start + sweep - ringGap/2;
-        if (segEnd > segStart) ringSegments.push({ sector: s, start: segStart, end: segEnd });
-        start += sweep;
-      });
-    })();
-
-    var TOP_N = 6;
-    var topSegs = ringSegments.slice(0, TOP_N);
-    var calloutR1 = ringOuterR + 10, calloutR2 = ringOuterR + 40;
-    topSegs.forEach(function(seg){
-      var mid = (seg.start + seg.end) / 2;
-      var cos = Math.cos(mid), sin = Math.sin(mid);
-      seg.callout = {
-        cos: cos, sin: sin,
-        x1: ringCx + calloutR1*cos, y1: ringCy + calloutR1*sin,
-        x2: ringCx + calloutR2*cos, y2: ringCy + calloutR2*sin,
-        side: cos >= 0 ? "right" : "left",
-      };
-    });
-    var MIN_LABEL_GAP = 46;
-    ["left","right"].forEach(function(side){
-      var pts = topSegs.filter(function(seg){ return seg.callout && seg.callout.side === side; })
-        .sort(function(a,b){ return a.callout.y2 - b.callout.y2; });
-      for (var i=1;i<pts.length;i++){
-        if (pts[i].callout.y2 - pts[i-1].callout.y2 < MIN_LABEL_GAP){
-          pts[i].callout.y2 = pts[i-1].callout.y2 + MIN_LABEL_GAP;
-        }
-      }
-    });
-
-    drawRing(null);
-
-    // ring-callout 標籤每次整個重建（數量很少，效能不是問題）
-    Array.prototype.slice.call(ringWrap.querySelectorAll(".ring-callout")).forEach(function(el){ el.remove(); });
-    topSegs.forEach(function(seg){
-      var p = seg.callout;
-      var s = seg.sector;
-      var isRight = p.cos >= 0;
-      var el = document.createElement("div");
-      el.className = "ring-callout " + (isRight ? "align-right" : "align-left");
-      el.style.left = ((p.x2 + (isRight ? 36 : -36)) / ringW * 100) + "%";
-      el.style.top = (p.y2 / ringH * 100) + "%";
-      var changeColor = s.change >= 0 ? "hsl(351,70%,68%)" : (s.change <= -0.05 ? "hsl(150,55%,60%)" : "var(--text-muted)");
-      el.innerHTML = '<div class="rc-name">' + s.name + '</div>' +
-        '<div class="rc-change" style="color:' + changeColor + '">' + (s.change>=0?"+":"") + s.change.toFixed(2) + '%</div>';
-      ringWrap.appendChild(el);
-    });
-
-    centerValueEl.textContent = formatYi(trackedTotal);
-    centerLabelEl.innerHTML = (totalMarketAmount && totalMarketAmount > 0)
-      ? "≥5億族群合計<br>占大盤 " + (trackedTotal / totalMarketAmount * 100).toFixed(1) + "%"
-      : "≥5億族群合計";
-
-    renderFlowTable();
+  function renderFlowBoard(data){
+    data = data || {};
+    var sectors = data.sectors || [];
+    fbUpdated.textContent = "";
+    fbList.innerHTML = "";
+    if (!sectors.length){
+      fbEmpty.style.display = "block";
+      fbEmpty.textContent = "目前沒有資料，稍後自動重試。";
+      return;
+    }
+    fbEmpty.style.display = "none";
+    sectors.forEach(function(s, i){ fbList.appendChild(renderFlowCard(s, i)); });
   }
 
   function setStatus(kind, text){
     connStatus.className = "conn-status is-" + kind;
     connStatus.textContent = text;
   }
-
-  // 分享版特有：這裡的 WebSocket 連線本身是連到中繼伺服器，中繼伺服器隨時都能連得上，
-  // 但那不代表分享者自己電腦上的 live_quote_server.py 還在運作、還在推新資料進來。
-  // 所以另外追蹤「最後一次真的收到新資料」的時間，太久沒收到就提醒「分享者可能離線」，
-  // 不要讓人誤以為畫面上的舊數字是這一刻的即時報價。
-  var lastDataAt = null;
-  var STALE_AFTER_MS = 20000; // 正常每5秒推一次，20秒收不到新的就算「太舊」
-  function checkStale(){
-    if (lastDataAt == null) return;
-    var ageMs = Date.now() - lastDataAt;
-    if (ageMs > STALE_AFTER_MS && connStatus.classList.contains("is-live")){
-      setStatus("connecting", "已 " + Math.round(ageMs/1000) + " 秒沒收到新資料，分享者可能暫時離線");
-    }
-  }
-  setInterval(checkStale, 5000);
 
   var RECONNECT_DELAY = 2000;
   function connect(){
@@ -897,11 +799,11 @@
       var msg;
       try { msg = JSON.parse(ev.data); } catch(e){ return; }
       if (msg.type !== "heatmap") return;
-      lastDataAt = Date.now();
-      setStatus("live", "即時連線中");
+      currentElapsedMin = msg.elapsedMin || 0;
+      volumeBaseline = msg.volumeBaseline || volumeBaseline;
       render(msg.sectors || []);
-      renderFlow(msg.sectors || [], msg.totalAmount || 0);
       renderLimitSentiment(msg.limitSentiment);
+      renderFlowBoard(msg.flowBoard);
       updateMeta.innerHTML = "最後更新　<b>" + msg.updatedAt + "</b>";
     };
   }
