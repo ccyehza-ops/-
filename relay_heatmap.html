@@ -266,6 +266,16 @@
           </div>
         </div>
       </div>
+      <div class="sentiment-panel" id="highPricePanel" hidden>
+        <div class="sentiment-title">千金股</div>
+        <div class="sentiment-cards">
+          <div class="sentiment-card">
+            <div class="sc-label">平均漲幅（股價≥1000）</div>
+            <div class="sc-value" id="hpValue">—</div>
+            <div class="sc-breakdown" id="hpBreak"></div>
+          </div>
+        </div>
+      </div>
       <div class="update-meta" id="updateMeta">尚未取得資料</div>
       <span class="conn-status is-connecting" id="connStatus">連線中…</span>
     </div>
@@ -325,6 +335,9 @@
   var scUpBreak = document.getElementById("scUpBreak");
   var scDownValue = document.getElementById("scDownValue");
   var scDownBreak = document.getElementById("scDownBreak");
+  var highPricePanel = document.getElementById("highPricePanel");
+  var hpValue = document.getElementById("hpValue");
+  var hpBreak = document.getElementById("hpBreak");
   var searchInput = document.getElementById("search");
   var searchEmptyState = document.getElementById("searchEmptyState");
 
@@ -360,8 +373,23 @@
     scDownBreak.textContent = "上市 " + ls.downTse + "｜上櫃 " + ls.downOtc;
   }
 
+  function renderHighPriceSentiment(hps){
+    if (!hps) return;
+    highPricePanel.hidden = false;
+    if (hps.count === 0 || hps.avgChange == null){
+      hpValue.textContent = "—";
+      hpBreak.textContent = "目前沒有股價≥1000元的個股";
+      return;
+    }
+    var a = hps.avgChange;
+    hpValue.innerHTML = (a >= 0 ? "+" : "") + a.toFixed(2) + '<span class="sc-unit">%</span>';
+    hpValue.style.color = a >= 0 ? "hsl(351,70%,62%)" : "hsl(150,55%,55%)";
+    hpBreak.textContent = "共 " + hps.count + " 檔（上市 " + hps.countTse + "｜上櫃 " + hps.countOtc + "）";
+  }
+
   var TRADING_MINUTES = 270;
   var currentElapsedMin = 0;
+  var currentIsDataLive = true; // 休市時伺服器會判斷目前其實是凍結的上一交易日資料，這時候不估算、不標記💰
   var VOL_ESTIMATE_MIN_ELAPSED_MIN = 30;
   var VOL_RATIO_ALERT = 1.5;
   var volumeBaseline = {};  // code -> 5日均量(張)，隨每輪websocket訊息一起更新，不用另外打API
@@ -555,7 +583,9 @@
         var titleTxt = name + "　" + (change>=0?"+":"") + change.toFixed(2) + "%　成交金額約 " + (amount ? Math.round(amount/1e8) : 0) + "億";
         var showVolBadge = false;
         var estVolume = null, isEstimate = false;
-        if (volume && currentElapsedMin > VOL_ESTIMATE_MIN_ELAPSED_MIN && currentElapsedMin < TRADING_MINUTES){
+        if (!currentIsDataLive){
+          titleTxt += "　（休市中，沿用上一交易日收盤資料，不估算量能）";
+        } else if (volume && currentElapsedMin > VOL_ESTIMATE_MIN_ELAPSED_MIN && currentElapsedMin < TRADING_MINUTES){
           estVolume = volume / currentElapsedMin * TRADING_MINUTES;
           isEstimate = true;
         } else if (volume && currentElapsedMin >= TRADING_MINUTES){
@@ -800,9 +830,11 @@
       try { msg = JSON.parse(ev.data); } catch(e){ return; }
       if (msg.type !== "heatmap") return;
       currentElapsedMin = msg.elapsedMin || 0;
+      currentIsDataLive = msg.isDataLive !== false;
       volumeBaseline = msg.volumeBaseline || volumeBaseline;
       render(msg.sectors || []);
       renderLimitSentiment(msg.limitSentiment);
+      renderHighPriceSentiment(msg.highPriceSentiment);
       renderFlowBoard(msg.flowBoard);
       updateMeta.innerHTML = "最後更新　<b>" + msg.updatedAt + "</b>";
     };
