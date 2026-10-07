@@ -203,6 +203,9 @@
   .fb-rank{ font-family:"JetBrains Mono",monospace; font-size:11.5px; font-weight:700; color:var(--text-faint); }
   .fb-card.is-group .fb-rank{ color:var(--accent); }
   .fb-card.is-solo .fb-rank{ color:#e0a884; }
+  .fb-rank-delta{ font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:700; }
+  .fb-rank-delta.up{ color:hsl(351,70%,62%); }
+  .fb-rank-delta.down{ color:hsl(150,55%,55%); }
   .fb-name{ font-size:13px; font-weight:600; flex-grow:1; }
   .fb-verdict{ font-size:10px; font-weight:700; border-radius:99px; padding:2px 8px; white-space:nowrap; }
   .fb-verdict.group{ color:#8ff0c4; background:rgba(69,216,184,0.12); border:1px solid var(--accent-dim); }
@@ -285,7 +288,7 @@
     <aside class="flow-side" id="flowSide">
       <section class="fb-panel">
         <div class="fb-head">
-          <span class="primary">全市場資金淨流入（第一優先）</span>
+          <span class="primary">全市場成交金額排行（第一優先）</span>
           <span id="fbUpdated">尚未取得資料</span>
         </div>
         <div class="fb-list" id="fbList"></div>
@@ -308,14 +311,15 @@
     族群「平均漲跌」用成交金額加權，且把成交金額 &lt; 5000萬、沒有顯示出來的冷門股也一起算進去，讓平均盡量
     反映整個族群真實表現；每個族群格子最多顯示「成交金額前6大」，其餘仍計入族群名稱旁的檔數。右上角搜尋框
     可以用代號或名稱找個股，找到會保留對應族群、其餘淡出。「漲停板情緒」是全市場今日實際漲停/跌停家數
-    （門檻 9.5%）。左側「資金流向排行榜」依族群「淨流入金額」（漲的股票成交金額算+、跌的算-，不是不分漲跌
-    方向的原始成交金額）由大到小排序——這樣才不會把「一檔股票爆量下跌」誤判成「資金流入」；旁邊另外列出
-    「總成交」當參考，看這個族群今天單純有多熱鬧、不分漲跌方向。「族群廣度」「分散度」用目前顯示出來的
-    代表股（成交金額前6大）算，判斷是不是整族群一起動、還是一兩檔大單在拉；「資金連續性」是分享者那邊
-    累積的近幾天同時段比較。右側熱力圖格子右上角出現💰代表這檔股票「預估全天成交金額」明顯超過（1.5倍以上）
-    自己最近5個交易日的平均量，滑鼠移到格子上可以看到詳細倍數；開盤前30分鐘不估算、也不標記。這個分享版
-    沒有「點格子看單檔即時報價」跟「回朔查看歷史」這兩個功能（都需要連回分享者自己的電腦，對你沒有意義）。
-    僅供參考，非投資建議。
+    （門檻 9.5%）；旁邊「千金股」是股價≥1000元這群股票的簡單平均漲跌幅。左側「全市場成交金額排行」依族群
+    「成交金額」（漲的+跌的都算，不分方向）由大到小排序，前20名的篩選依據也是成交金額，不會漏掉像晶圓代工
+    這種成交熱絡、但族群內漲跌互抵的族群；排名數字旁邊的▲▼是跟約3分鐘前比的排名變化，過濾掉短期雜訊，
+    看得出真正在往上還是往下。「族群廣度」「分散度」用目前顯示出來的代表股（成交金額前6大）算，判斷是不是
+    整族群一起動、還是一兩檔大單在拉；「資金連續性」比的也是成交金額（不是淨流入）跟前幾天同時段比有沒有
+    放量。右側熱力圖格子右上角出現💰代表這檔股票「預估全天成交量」（用實測的開盤節奏曲線換算，不是單純
+    線性外推）明顯超過（1.5倍以上）自己最近5個交易日的平均量，滑鼠移到格子上可以看到詳細倍數；開盤前15分鐘
+    不估算、也不標記，分享者電腦沒開著或收盤後也不會標記。這個分享版沒有「點格子看單檔即時報價」跟「回朔
+    查看歷史」這兩個功能（都需要連回分享者自己的電腦，對你沒有意義）。僅供參考，非投資建議。
   </div>
 </div>
 
@@ -390,9 +394,24 @@
   var TRADING_MINUTES = 270;
   var currentElapsedMin = 0;
   var currentIsDataLive = true; // 休市時伺服器會判斷目前其實是凍結的上一交易日資料，這時候不估算、不標記💰
-  var VOL_ESTIMATE_MIN_ELAPSED_MIN = 30;
+  var VOL_ESTIMATE_MIN_ELAPSED_MIN = 15;
   var VOL_RATIO_ALERT = 1.5;
   var volumeBaseline = {};  // code -> 5日均量(張)，隨每輪websocket訊息一起更新，不用另外打API
+  var intradayProfile = {};  // bucket(5分鐘一格)->經驗累積量比例，也隨websocket訊息一起更新
+
+  function profileFractionAt(elapsedMin){
+    var keys = Object.keys(intradayProfile);
+    if (!keys.length) return null;
+    var lo = Math.max(0, Math.floor(elapsedMin / 5) * 5);
+    var hi = Math.min(270, lo + 5);
+    var fLo = intradayProfile[lo], fHi = intradayProfile[hi];
+    if (fLo == null && fHi == null) return null;
+    if (fLo == null) return fHi;
+    if (fHi == null) return fLo;
+    if (hi === lo) return fLo;
+    var t = (elapsedMin - lo) / (hi - lo);
+    return fLo + (fHi - fLo) * t;
+  }
 
   var lastChange = {};
   var cellEls = {};
@@ -494,7 +513,7 @@
     board.hidden = false;
 
     var sorted = sectors.slice().sort(function(a, b){
-      var na = a.netAmount || 0, nb = b.netAmount || 0;
+      var na = a.amount || 0, nb = b.amount || 0;
       if (nb !== na) return nb - na;
       return b.avgChange - a.avgChange;
     });
@@ -586,7 +605,8 @@
         if (!currentIsDataLive){
           titleTxt += "　（休市中，沿用上一交易日收盤資料，不估算量能）";
         } else if (volume && currentElapsedMin > VOL_ESTIMATE_MIN_ELAPSED_MIN && currentElapsedMin < TRADING_MINUTES){
-          estVolume = volume / currentElapsedMin * TRADING_MINUTES;
+          var frac = profileFractionAt(currentElapsedMin);
+          estVolume = (frac && frac > 0) ? (volume / frac) : (volume / currentElapsedMin * TRADING_MINUTES);
           isEstimate = true;
         } else if (volume && currentElapsedMin >= TRADING_MINUTES){
           estVolume = volume;
@@ -652,6 +672,8 @@
   }
 
   var fbExpanded = {};
+  var fbRankHistory = {};
+  var FB_RANK_TREND_SAMPLES = 18; // 18輪x每輪更新一次≈3分鐘，排名漲跌箭頭跟這個窗口最舊的那一筆比，不是只比上一輪，避免短期雜訊讓箭頭一直閃
 
   function renderFlowCard(s, i){
     var isGroup = s.isGroupEffect;
@@ -671,13 +693,21 @@
     var rank = document.createElement("span");
     rank.className = "fb-rank";
     rank.textContent = String(i + 1);
+    top.appendChild(chevron); top.appendChild(rank);
+    if (s._rankDelta != null && s._rankDelta !== 0){
+      var delta = document.createElement("span");
+      delta.className = "fb-rank-delta " + (s._rankDelta > 0 ? "up" : "down");
+      delta.textContent = (s._rankDelta > 0 ? "▲" : "▼") + Math.abs(s._rankDelta);
+      delta.title = "跟約3分鐘前比，排名" + (s._rankDelta > 0 ? "上升" : "下降") + Math.abs(s._rankDelta) + "名";
+      top.appendChild(delta);
+    }
     var name = document.createElement("span");
     name.className = "fb-name";
     name.textContent = s.sector;
     var verdict = document.createElement("span");
     verdict.className = "fb-verdict " + (isGroup ? "group" : "solo");
     verdict.textContent = isGroup ? "族群效應" : "個股帶動";
-    top.appendChild(chevron); top.appendChild(rank); top.appendChild(name); top.appendChild(verdict);
+    top.appendChild(name); top.appendChild(verdict);
     card.appendChild(top);
 
     var sub = document.createElement("div");
@@ -685,28 +715,22 @@
     sub.textContent = "均漲 " + fbFmtPct(s.avgChange);
     card.appendChild(sub);
 
-    var isInflow = (s.netAmount || 0) >= 0;
-    var flowColor = isInflow ? "hsl(351,70%,66%)" : "hsl(150,55%,58%)";
+    var dirColor = (s.avgChange || 0) >= 0 ? "hsl(351,70%,66%)" : "hsl(150,55%,58%)";
     var moneyRow = document.createElement("div");
     moneyRow.className = "fb-money-row";
-    moneyRow.innerHTML = '<span class="fb-money-val" style="color:' + flowColor + ';">' +
-        (isInflow ? "淨流入 " : "淨流出 ") + formatYiPlain(Math.abs(s.netAmount) / 1e8) + '</span>' +
-      '<span class="fb-money-pct">占大盤淨額 ' + fbFmtPct(s.netAmountPct) + '</span>';
+    moneyRow.innerHTML = '<span class="fb-money-val" style="color:' + dirColor + ';">' +
+        "成交金額 " + formatYiPlain((s.amount || 0) / 1e8) + '</span>' +
+      '<span class="fb-money-pct">占大盤 ' + fbFmtPct(s.amountPct) + '</span>';
     card.appendChild(moneyRow);
 
     var barTrack = document.createElement("div");
     barTrack.className = "fb-bar-track";
     var barFill = document.createElement("div");
     barFill.className = "fb-bar-fill";
-    barFill.style.background = flowColor;
-    barFill.style.width = Math.max(4, Math.min(100, Math.abs(s.netAmountPct || 0) * 4)) + "%";
+    barFill.style.background = dirColor;
+    barFill.style.width = Math.max(4, Math.min(100, Math.abs(s.amountPct || 0) * 4)) + "%";
     barTrack.appendChild(barFill);
     card.appendChild(barTrack);
-
-    var turnoverEl = document.createElement("div");
-    turnoverEl.className = "fb-turnover";
-    turnoverEl.textContent = "總成交 " + formatYiPlain(s.amount / 1e8) + "・占大盤 " + fbFmtPct(s.amountPct);
-    card.appendChild(turnoverEl);
 
     var metaRow = document.createElement("div");
     metaRow.className = "fb-meta-row";
@@ -805,6 +829,14 @@
       return;
     }
     fbEmpty.style.display = "none";
+    // 排名漲跌箭頭：跟約3分鐘前比，不是只比上一輪，過濾短期雜訊。
+    sectors.forEach(function(s, i){
+      var rank = i + 1;
+      var hist = fbRankHistory[s.sector] = fbRankHistory[s.sector] || [];
+      hist.push(rank);
+      if (hist.length > FB_RANK_TREND_SAMPLES) hist.shift();
+      s._rankDelta = (hist.length >= 2) ? (hist[0] - rank) : null;
+    });
     sectors.forEach(function(s, i){ fbList.appendChild(renderFlowCard(s, i)); });
   }
 
@@ -832,6 +864,11 @@
       currentElapsedMin = msg.elapsedMin || 0;
       currentIsDataLive = msg.isDataLive !== false;
       volumeBaseline = msg.volumeBaseline || volumeBaseline;
+      if (msg.intradayVolumeProfile){
+        var ip = {};
+        for (var pk in msg.intradayVolumeProfile) ip[parseInt(pk, 10)] = msg.intradayVolumeProfile[pk];
+        intradayProfile = ip;
+      }
       render(msg.sectors || []);
       renderLimitSentiment(msg.limitSentiment);
       renderHighPriceSentiment(msg.highPriceSentiment);
