@@ -848,7 +848,7 @@
   var RECONNECT_DELAY = 2000;
   // 分頁切到背景（或最小化）時主動斷線，切回來再重連——公開版的流量是按「送給觀看者
   // 的資料量」計費，沒人在看的分頁不用一直收；重連後伺服器會馬上補送最新一筆資料。
-  var curWs = null, reconnectTimer = null, pausedByHidden = false;
+  var curWs = null, reconnectTimer = null, pausedByHidden = false, cappedByServer = false;
   function connect(){
     if (curWs && (curWs.readyState === WebSocket.OPEN || curWs.readyState === WebSocket.CONNECTING)) return;
     clearTimeout(reconnectTimer);
@@ -861,7 +861,7 @@
     ws.onclose = function(){
       if (curWs !== ws) return;
       curWs = null;
-      if (pausedByHidden) return;
+      if (pausedByHidden || cappedByServer) return;
       setStatus("error", "連線中斷，" + (RECONNECT_DELAY/1000) + "秒後重試");
       reconnectTimer = setTimeout(connect, RECONNECT_DELAY);
     };
@@ -869,6 +869,13 @@
     ws.onmessage = function(ev){
       var msg;
       try { msg = JSON.parse(ev.data); } catch(e){ return; }
+      if (msg.type === "capped"){
+        // 本月分享流量已達上限（為了避免超額計費，中繼伺服器停止推送），不要一直重連。
+        cappedByServer = true;
+        setStatus("error", "本月分享流量已達上限，下個月 1 號自動恢復");
+        updateMeta.innerHTML = "本月分享流量已達上限，畫面停在最後一筆資料，<b>下個月 1 號自動恢復</b>";
+        return;
+      }
       if (msg.type !== "heatmap") return;
       currentElapsedMin = msg.elapsedMin || 0;
       currentIsDataLive = msg.isDataLive !== false;

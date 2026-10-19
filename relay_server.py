@@ -25,7 +25,7 @@ import hmac
 import json
 import asyncio
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -48,6 +48,50 @@ last_ingest_at = None       # datetime，最後一次成功收到推送的時間
 watchers = set()            # 正在看這個公開網址的瀏覽器連線，每個一個 asyncio.Queue
 watchers_lock = threading.Lock()
 MAIN_LOOP = None
+
+
+# 每月「送給觀看者」的流量上限（GB）。Render Hobby 每月含 5GB、超過每 GB $0.15；這裡
+# 自己用「未壓縮的 JSON 位元組數」計數（會比 Render 實際計費的壓縮後流量多估一些，
+# 偏保守），達到上限就停止推送給觀看者，費用才有天花板。預設 12GB：就算完全沒有壓縮，
+# 最壞也只多花 (12-5)*0.15 ≈ $1。可用環境變數 RELAY_MONTHLY_CAP_GB 調整。
+# 計數器放在記憶體，服務重啟/重新部署會歸零（免費方案沒有磁碟可存），所以這只是
+# 「保險」，實際用量以 Render 後台 Billing 頁為準。
+try:
+    RELAY_MONTHLY_CAP_BYTES = int(float(os.environ.get("RELAY_MONTHLY_CAP_GB", "12")) * 1024 ** 3)
+except ValueError:
+    RELAY_MONTHLY_CAP_BYTES = 12 * 1024 ** 3
+usage_lock = threading.Lock()
+usage = {"month": None, "ws_bytes": 0, "http_bytes": 0}
+
+
+def _month_key():
+    return datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m")
+
+
+def add_usage(kind, nbytes):
+    with usage_lock:
+        mk = _month_key()
+        if usage["month"] != mk:
+            usage["month"] = mk
+            usage["ws_bytes"] = 0
+            usage["http_bytes"] = 0
+        usage[kind] += nbytes
+
+
+def usage_snapshot():
+    with usage_lock:
+        mk = _month_key()
+        if usage["month"] != mk:
+            usage["month"] = mk
+            usage["ws_bytes"] = 0
+            usage["http_bytes"] = 0
+        total = usage["ws_bytes"] + usage["http_bytes"]
+        return {
+            "usageMonth": usage["month"],
+            "bytesSentMonthGB": round(total / 1024 ** 3, 3),
+            "capGB": round(RELAY_MONTHLY_CAP_BYTES / 1024 ** 3, 2),
+            "capped": total >= RELAY_MONTHLY_CAP_BYTES,
+        }
 
 
 def check_token(req_token):
@@ -103,24 +147,48 @@ async def status():
         has_data = latest_payload is not None
         ts = last_ingest_at
     age_seconds = (datetime.now(timezone.utc) - ts).total_seconds() if ts else None
-    return {"hasData": has_data, "lastIngestAgeSeconds": age_seconds, "tokenConfigured": bool(RELAY_TOKEN)}
+    out = {"hasData": has_data, "lastIngestAgeSeconds": age_seconds, "tokenConfigured": bool(RELAY_TOKEN)}
+    out.update(usage_snapshot())
+    return out
 
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
     html_path = os.path.join(SCRIPT_DIR, "relay_heatmap.html")
     with open(html_path, "r", encoding="utf-8") as f:
-        return f.read()
+        html = f.read()
+    add_usage("http_bytes", len(html.encode("utf-8")))
+    return html
+
+
+async def _send_counted(websocket, msg):
+    text = json.dumps(msg, ensure_ascii=False, separators=(",", ":"))
+    await websocket.send_text(text)
+    add_usage("ws_bytes", len(text.encode("utf-8")))
+
+
+async def _send_capped_and_close(websocket):
+    snap = usage_snapshot()
+    try:
+        await websocket.send_text(json.dumps({"type": "capped", "usageMonth": snap["usageMonth"],
+                                              "capGB": snap["capGB"]}, ensure_ascii=False))
+        await websocket.close()
+    except Exception:
+        pass
 
 
 @app.websocket("/ws/heatmap")
 async def ws_heatmap(websocket: WebSocket):
     await websocket.accept()
 
+    if usage_snapshot()["capped"]:
+        await _send_capped_and_close(websocket)
+        return
+
     with state_lock:
         payload = latest_payload
     if payload is not None:
-        await websocket.send_json(payload)
+        await _send_counted(websocket, payload)
 
     queue = asyncio.Queue()
     with watchers_lock:
@@ -129,7 +197,10 @@ async def ws_heatmap(websocket: WebSocket):
     try:
         while True:
             msg = await queue.get()
-            await websocket.send_json(msg)
+            if usage_snapshot()["capped"]:
+                await _send_capped_and_close(websocket)
+                break
+            await _send_counted(websocket, msg)
     except WebSocketDisconnect:
         pass
     except Exception as e:
