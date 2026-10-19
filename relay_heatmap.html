@@ -846,15 +846,24 @@
   }
 
   var RECONNECT_DELAY = 2000;
+  // 分頁切到背景（或最小化）時主動斷線，切回來再重連——公開版的流量是按「送給觀看者
+  // 的資料量」計費，沒人在看的分頁不用一直收；重連後伺服器會馬上補送最新一筆資料。
+  var curWs = null, reconnectTimer = null, pausedByHidden = false;
   function connect(){
+    if (curWs && (curWs.readyState === WebSocket.OPEN || curWs.readyState === WebSocket.CONNECTING)) return;
+    clearTimeout(reconnectTimer);
     var proto = location.protocol === "https:" ? "wss:" : "ws:";
     var ws = new WebSocket(proto + "//" + location.host + "/ws/heatmap");
+    curWs = ws;
     setStatus("connecting", "連線中…");
 
     ws.onopen = function(){ setStatus("live", "即時連線中"); };
     ws.onclose = function(){
+      if (curWs !== ws) return;
+      curWs = null;
+      if (pausedByHidden) return;
       setStatus("error", "連線中斷，" + (RECONNECT_DELAY/1000) + "秒後重試");
-      setTimeout(connect, RECONNECT_DELAY);
+      reconnectTimer = setTimeout(connect, RECONNECT_DELAY);
     };
     ws.onerror = function(){ try { ws.close(); } catch(e){} };
     ws.onmessage = function(ev){
@@ -876,7 +885,23 @@
       updateMeta.innerHTML = "最後更新　<b>" + msg.updatedAt + "</b>";
     };
   }
-  connect();
+  document.addEventListener("visibilitychange", function(){
+    if (document.hidden){
+      pausedByHidden = true;
+      clearTimeout(reconnectTimer);
+      if (curWs){ try { curWs.close(); } catch(e){} }
+      setStatus("connecting", "分頁在背景，已暫停更新");
+    } else if (pausedByHidden){
+      pausedByHidden = false;
+      connect();
+    }
+  });
+  if (document.hidden){
+    pausedByHidden = true;
+    setStatus("connecting", "分頁在背景，已暫停更新");
+  } else {
+    connect();
+  }
 })();
 </script>
 </body>
